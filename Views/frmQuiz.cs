@@ -11,39 +11,40 @@ namespace QuizGame.Views
     {
         private int currentQuestionIndex = 0;
         private int topicId;
-        private int currentUserId; 
+        private int currentUserId;
         private DataTable questions;
-        private int score = 0; 
-        private System.Windows.Forms.Timer quizTimer; 
-        private int timeLeft = 30; 
+        private int score = 0;
+        private System.Windows.Forms.Timer quizTimer;
+        private int timeLeft = 30;
+        private bool isQuizCompleted = false;
 
         public frmQuiz(int topicId, int userId)
         {
             InitializeComponent();
             this.topicId = topicId;
-            this.currentUserId = userId; 
+            this.currentUserId = userId;
 
             quizTimer = new System.Windows.Forms.Timer();
-            quizTimer.Interval = 1000; 
-            quizTimer.Tick += QuizTimer_Tick; 
+            quizTimer.Interval = 1000;
+            quizTimer.Tick += QuizTimer_Tick;
 
             LoadQuestions();
             DisplayCurrentQuestion();
-            lblResult.Text = "Total Score: " + score; 
+            lblResult.Text = "Total Score: " + score;
         }
 
         private void QuizTimer_Tick(object sender, EventArgs e)
         {
-            timeLeft--; 
+            timeLeft--;
 
             lblTimer.Text = $"Time Left: {timeLeft}s";
 
             if (timeLeft <= 0)
             {
-                quizTimer.Stop(); 
+                quizTimer.Stop();
                 MessageBox.Show("Time is up! Moving to the next question.");
-                currentQuestionIndex++; 
-                DisplayCurrentQuestion(); 
+                currentQuestionIndex++;
+                DisplayCurrentQuestion();
             }
         }
 
@@ -51,7 +52,7 @@ namespace QuizGame.Views
         {
             using (var connection = new Connection())
             {
-                string query = "SELECT Id, QuestionText, QuestionType FROM Questions WHERE TopicId = @TopicId";
+                string query = "SELECT Id, QuestionText, QuestionType, image FROM Questions WHERE TopicId = @TopicId";
                 SqlParameter[] parameters = new SqlParameter[]
                 {
                     new SqlParameter("@TopicId", topicId)
@@ -62,13 +63,34 @@ namespace QuizGame.Views
 
         private void DisplayCurrentQuestion()
         {
-            if (currentQuestionIndex < questions.Rows.Count)
+            if (currentQuestionIndex >= questions.Rows.Count)
             {
+                MessageBox.Show("Quiz completed! Your total score is: " + score);
+                lblResult.Text = "Total Score: " + score;
+                lblResult.Visible = true;
+
+                SaveQuizResult();
+                isQuizCompleted = true;
+                this.Close();
+                return;
+            }
+            else
+            { 
                 var questionRow = questions.Rows[currentQuestionIndex];
                 lblQuestion.Text = questionRow["QuestionText"].ToString();
                 string questionType = questionRow["QuestionType"].ToString();
 
                 panelAnswers.Controls.Clear();
+
+                string imagePath = questionRow["image"]?.ToString();
+                if (!string.IsNullOrEmpty(imagePath) && File.Exists(imagePath))
+                {
+                    pictureBoxQuestion.Image = Image.FromFile(imagePath);
+                }
+                else
+                {
+                    pictureBoxQuestion.Image = null;
+                }
 
                 switch (questionType)
                 {
@@ -83,20 +105,11 @@ namespace QuizGame.Views
                         break;
                 }
 
-                timeLeft = 30; 
-                lblTimer.Text = $"Time Left: {timeLeft}s"; 
-                quizTimer.Start(); 
+                timeLeft = 30;
+                lblTimer.Text = $"Time Left: {timeLeft}s";
+                quizTimer.Start();
             }
-            else
-            {
-                MessageBox.Show("Quiz completed! Your total score is: " + score);
-                lblResult.Text = "Total Score: " + score; 
-                lblResult.Visible = true; 
 
-                SaveQuizResult(); 
-
-                this.Close(); 
-            }
         }
 
         private void LoadMultipleChoiceAnswers()
@@ -119,15 +132,14 @@ namespace QuizGame.Views
                         Padding = new Padding(5)
                     };
 
-                    RadioButton radioButton = new RadioButton
+                    CheckBox checkBox = new CheckBox
                     {
                         Text = answer["AnswerText"].ToString(),
-                        Dock = DockStyle.Fill,
+                        Dock = DockStyle.Left,
                         Tag = answer["IsCorrect"]
                     };
 
-                    answerPanel.Controls.Add(radioButton);
-
+                    answerPanel.Controls.Add(checkBox);
                     panelAnswers.Controls.Add(answerPanel);
                 }
             }
@@ -183,33 +195,91 @@ namespace QuizGame.Views
         private void btnNext_Click(object sender, EventArgs e)
         {
             bool isCorrect = false;
+            string questionType = questions.Rows[currentQuestionIndex]["QuestionType"].ToString();
 
-            if (questions.Rows[currentQuestionIndex]["QuestionType"].ToString() == "Multiple Choice")
+            if (questionType == "Multiple Choice")
             {
+                bool allCorrectSelected = true;
+                bool hasIncorrectSelected = false;
+
                 foreach (Control control in panelAnswers.Controls)
                 {
-                    if (control is RadioButton radioButton && radioButton.Checked)
+                    if (control is Panel panel && panel.Controls.OfType<CheckBox>().FirstOrDefault() is CheckBox checkBox)
                     {
-                        isCorrect = Convert.ToBoolean(radioButton.Tag);
-                        break;
+                        bool isAnswerCorrect = bool.Parse(checkBox.Tag.ToString());
+
+                        if (checkBox.Checked && !isAnswerCorrect)
+                        {
+                            hasIncorrectSelected = true;
+                        }
+                        else if (!checkBox.Checked && isAnswerCorrect)
+                        {
+                            allCorrectSelected = false;
+                        }
                     }
                 }
-            }
-            else if (questions.Rows[currentQuestionIndex]["QuestionType"].ToString() == "Open-Ended")
-            {
-                TextBox txtAnswer = panelAnswers.Controls.OfType<TextBox>().FirstOrDefault();
-                if (txtAnswer != null && txtAnswer.Text.Equals("Answer", StringComparison.OrdinalIgnoreCase))
+
+                if (allCorrectSelected && !hasIncorrectSelected)
                 {
                     isCorrect = true;
                 }
             }
-            else if (questions.Rows[currentQuestionIndex]["QuestionType"].ToString() == "True/False")
+            else if (questionType == "Open-Ended")
             {
+                int questionId = (int)questions.Rows[currentQuestionIndex]["Id"];
+                string correctAnswer = "";
+
+                using (var connection = new Connection())
+                {
+                    string query = "SELECT AnswerText FROM Answers WHERE QuestionId = @QuestionId AND IsCorrect = 1";
+                    SqlParameter[] parameters = new SqlParameter[]
+                    {
+                        new SqlParameter("@QuestionId", questionId)
+                    };
+                    object result = connection.ExecuteScalar(query, parameters);
+                    if (result != null)
+                    {
+                        correctAnswer = result.ToString().Trim();
+                    }
+                }
+
+                TextBox txtAnswer = panelAnswers.Controls.OfType<TextBox>().FirstOrDefault();
+                if (txtAnswer != null)
+                {
+                    string userAnswer = txtAnswer.Text.Trim();
+                    if (string.Equals(userAnswer, correctAnswer, StringComparison.OrdinalIgnoreCase))
+                    {
+                        isCorrect = true;
+                    }
+                }
+            }
+            else if (questionType == "True/False")
+            {
+                int questionId = (int)questions.Rows[currentQuestionIndex]["Id"];
+                string correctAnswer = "";
+
+                using (var connection = new Connection())
+                {
+                    string query = "SELECT AnswerText FROM Answers WHERE QuestionId = @QuestionId AND IsCorrect = 1";
+                    SqlParameter[] parameters = new SqlParameter[]
+                    {
+                        new SqlParameter("@QuestionId", questionId)
+                    };
+                    object result = connection.ExecuteScalar(query, parameters);
+                    if (result != null)
+                    {
+                        correctAnswer = result.ToString();
+                    }
+                }
+
                 foreach (Control control in panelAnswers.Controls)
                 {
-                    if (control is RadioButton radioButton && radioButton.Checked)
+                    if (control is Panel panel && panel.Controls.OfType<RadioButton>().FirstOrDefault() is RadioButton radioButton && radioButton.Checked)
                     {
-                        isCorrect = Convert.ToBoolean(radioButton.Tag);
+                        if (radioButton.Tag.ToString().Equals(correctAnswer, StringComparison.OrdinalIgnoreCase))
+                        {
+                            isCorrect = true;
+                        }
                         break;
                     }
                 }
@@ -217,13 +287,25 @@ namespace QuizGame.Views
 
             if (isCorrect)
             {
-                score += 10; 
+                score += 10;
             }
 
-            lblResult.Text = "Total Score: " + score; 
+            lblResult.Text = "Total Score: " + score;
             currentQuestionIndex++;
-            quizTimer.Stop(); 
-            DisplayCurrentQuestion(); 
+            quizTimer.Stop();
+
+            if (currentQuestionIndex >= questions.Rows.Count)
+            {
+                isQuizCompleted = true;
+                MessageBox.Show($"Quiz completed! Your total score is: {score}");
+                SaveQuizResult();
+                this.Close();
+            }
+            else
+            {
+                DisplayCurrentQuestion();
+
+            }
         }
 
         private void SaveQuizResult()
@@ -232,10 +314,10 @@ namespace QuizGame.Views
 
             SqlParameter[] parameters = new SqlParameter[]
             {
-                new SqlParameter("@UserId", currentUserId), 
-                new SqlParameter("@TopicId", topicId), 
-                new SqlParameter("@DateTaken", DateTime.Now), 
-                new SqlParameter("@Score", score) 
+                new SqlParameter("@UserId", currentUserId),
+                new SqlParameter("@TopicId", topicId),
+                new SqlParameter("@DateTaken", DateTime.Now),
+                new SqlParameter("@Score", score)
             };
 
             using (var connection = new Connection())
@@ -252,6 +334,38 @@ namespace QuizGame.Views
             homeForm.SetCurrentUserId(currentUserId);
             homeForm.Show();
             this.Close();
+        }
+
+        private void frmQuiz_Load(object sender, EventArgs e)
+        {
+
+        }
+        public void SetCurrentUserId(int userId) {
+            this.currentUserId = userId;
+        }
+
+        private void frmQuiz_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            if (isQuizCompleted == true)
+            {
+                e.Cancel = false;
+                return;
+            }
+            var result = MessageBox.Show("Are you sure you want to quit the quiz? Your progress will not be saved.", "Confirm Exit", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+            if (result == DialogResult.Yes)
+            {
+                quizTimer.Stop();
+                score = 0;
+                currentQuestionIndex = 0;
+                frmHome homeForm = new frmHome();
+                homeForm.SetCurrentUserId(currentUserId) ;
+                homeForm.Show();
+                e.Cancel = false;
+            }
+            else
+            {
+                e.Cancel=true;
+            }
         }
     }
 }

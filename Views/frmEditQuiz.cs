@@ -1,16 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows.Forms;
+﻿using System.Data;
 using System.Data.SqlClient;
 using QuizGame.Models.Connection;
-using System.Diagnostics;
-using QuizGame.Models;
 
 namespace QuizGame.Views
 {
@@ -46,7 +36,7 @@ namespace QuizGame.Views
             panelQuestions.Controls.Clear();
             using (var connection = new Connection())
             {
-                string query = "SELECT Id, QuestionText, QuestionType FROM Questions WHERE TopicId = @TopicId";
+                string query = "SELECT Id, QuestionText, QuestionType, image FROM Questions WHERE TopicId = @TopicId";
                 SqlParameter[] parameters = { new SqlParameter("@TopicId", topicId) };
                 DataTable questions = connection.ExecuteQuery(query, parameters);
 
@@ -77,6 +67,26 @@ namespace QuizGame.Views
                     comboBoxQuestionType.SelectedItem = row["QuestionType"].ToString();
                     questionPanel.Controls.Add(comboBoxQuestionType);
 
+                    var pictureBox = new PictureBox
+                    {
+                        Size = new Size(150, 150),
+                        Dock = DockStyle.Left,
+                        BorderStyle = BorderStyle.FixedSingle,
+                        SizeMode = PictureBoxSizeMode.Zoom
+                    };
+                    string imagePath = row["image"]?.ToString();
+                    if (!string.IsNullOrEmpty(imagePath) && File.Exists(imagePath))
+                    {
+                        pictureBox.Image = Image.FromFile(imagePath);
+                        pictureBox.Tag = imagePath;
+                    }
+                    else
+                    {
+                        pictureBox.Image = null; // Nếu không có ảnh
+                        pictureBox.Tag = null;
+                    }
+                    questionPanel.Controls.Add(pictureBox);
+
                     LoadAnswers(questionPanel, Convert.ToInt32(row["Id"]), row["QuestionType"].ToString());
 
                     var btnEdit = new Button
@@ -87,7 +97,24 @@ namespace QuizGame.Views
                     };
                     btnEdit.Click += (s, args) =>
                     {
-                        EditQuestion(Convert.ToInt32(row["Id"]), txtQuestion.Text, comboBoxQuestionType.SelectedItem.ToString());
+                        EditQuestion(Convert.ToInt32(row["Id"]), txtQuestion.Text, comboBoxQuestionType.SelectedItem.ToString(), pictureBox.Tag?.ToString());
+                        using (var connection = new Connection())
+                        {
+                            string getImageQuery = "SELECT image FROM Questions WHERE Id = @QuestionId";
+                            SqlParameter[] parameters = { new SqlParameter("@QuestionId", Convert.ToInt32(row["Id"])) };
+                            string updatedImagePath = connection.ExecuteScalar(getImageQuery, parameters)?.ToString();
+
+                            if (!string.IsNullOrEmpty(updatedImagePath) && File.Exists(updatedImagePath))
+                            {
+                                pictureBox.Image = Image.FromFile(updatedImagePath);
+                                pictureBox.Tag = updatedImagePath;
+                            }
+                            else
+                            {
+                                pictureBox.Image = null;
+                                pictureBox.Tag = null;
+                            }
+                        }
                     };
                     questionPanel.Controls.Add(btnEdit);
 
@@ -120,26 +147,34 @@ namespace QuizGame.Views
                 switch (questionType)
                 {
                     case "Multiple Choice":
-                        for (int i = 0; i < answers.Rows.Count; i++)
+                        foreach (DataRow answerRow in answers.Rows)
                         {
+                            var panelAnswer = new Panel
+                            {
+                                Dock = DockStyle.Top,
+                                Height = 40
+                            };
+
                             var txtAnswer = new TextBox
                             {
-                                Text = answers.Rows[i]["AnswerText"].ToString(),
-                                Dock = DockStyle.Top,
-                                Height = 30,
-                                PlaceholderText = $"Answer {i + 1}"
+                                Text = answerRow["AnswerText"].ToString(),
+                                Dock = DockStyle.Left,
+                                Width = 600,
+                                PlaceholderText = "Answer Text"
                             };
-                            questionPanel.Controls.Add(txtAnswer);
-                        }
+                            panelAnswer.Controls.Add(txtAnswer);
 
-                        var comboBoxIsCorrect = new ComboBox
-                        {
-                            Dock = DockStyle.Top,
-                            Height = 30
-                        };
-                        comboBoxIsCorrect.Items.AddRange(new string[] { "0", "1", "2", "3" });
-                        comboBoxIsCorrect.SelectedIndex = answers.Rows.Cast<DataRow>().ToList().FindIndex(x => (bool)x["IsCorrect"]);
-                        questionPanel.Controls.Add(comboBoxIsCorrect);
+                            var chkCorrect = new CheckBox
+                            {
+                                Text = "Correct",
+                                Dock = DockStyle.Right,
+                                AutoSize = true,
+                                Checked = (bool)answerRow["IsCorrect"]
+                            };
+                            panelAnswer.Controls.Add(chkCorrect);
+
+                            questionPanel.Controls.Add(panelAnswer);
+                        }
                         break;
 
                     case "Open-Ended":
@@ -167,40 +202,123 @@ namespace QuizGame.Views
             }
         }
 
-        private void EditQuestion(int questionId, string newQuestionText, string questionType)
+        private void EditQuestion(int questionId, string newQuestionText, string questionType, string currentImagePath)
         {
             using (var connection = new Connection())
             {
-                string updateQuery = "UPDATE Questions SET QuestionText = @QuestionText, QuestionType = @QuestionType WHERE Id = @QuestionId";
-                SqlParameter[] parameters =
+                try
                 {
+                    string imagePath = currentImagePath;
+                    if (MessageBox.Show("Do you want to change the image?", "Edit Image", MessageBoxButtons.YesNo) == DialogResult.Yes)
+                    {
+                        using (var openFileDialog = new OpenFileDialog())
+                        {
+                            openFileDialog.Filter = "Image Files|*.jpg;*.jpeg;*.png;*.gif;*.bmp";
+                            if (openFileDialog.ShowDialog() == DialogResult.OK)
+                            {
+                                string newImagePath = Path.Combine(Application.StartupPath, "images", Path.GetFileName(openFileDialog.FileName));
+                                File.Copy(openFileDialog.FileName, newImagePath, true);
+                                imagePath = newImagePath;
+                            }
+                        }
+                    }
+
+                    string updateQuery = "UPDATE Questions SET QuestionText = @QuestionText, QuestionType = @QuestionType, image = @ImagePath WHERE Id = @QuestionId";
+                    SqlParameter[] parameters =
+                    {
                 new SqlParameter("@QuestionText", newQuestionText),
                 new SqlParameter("@QuestionType", questionType),
+                new SqlParameter("@ImagePath", (object)imagePath ?? DBNull.Value),
                 new SqlParameter("@QuestionId", questionId)
             };
-                connection.ExecuteNonQueryWithParams(updateQuery, parameters);
-                MessageBox.Show("Question updated successfully!");
+                    connection.ExecuteNonQueryWithParams(updateQuery, parameters);
+
+                    string deleteAnswersQuery = "DELETE FROM Answers WHERE QuestionId = @QuestionId";
+                    SqlParameter[] deleteParams = { new SqlParameter("@QuestionId", questionId) };
+                    connection.ExecuteNonQueryWithParams(deleteAnswersQuery, deleteParams);
+
+                    var questionPanel = panelQuestions.Controls
+                        .OfType<Panel>()
+                        .FirstOrDefault(p => p.Controls.OfType<TextBox>().Any(t => t.Text == newQuestionText));
+
+                    if (questionPanel == null)
+                    {
+                        MessageBox.Show("Failed to find the panel for this question.");
+                        return;
+                    }
+
+                    foreach (Control answerPanel in questionPanel.Controls.OfType<Panel>())
+                    {
+                        var txtAnswer = answerPanel.Controls.OfType<TextBox>().FirstOrDefault();
+                        var chkCorrect = answerPanel.Controls.OfType<CheckBox>().FirstOrDefault();
+
+                        if (txtAnswer != null && chkCorrect != null)
+                        {
+                            string answerText = txtAnswer.Text;
+                            bool isCorrect = chkCorrect.Checked;
+
+                            string insertAnswerQuery = "INSERT INTO Answers (QuestionId, AnswerText, IsCorrect) VALUES (@QuestionId, @AnswerText, @IsCorrect)";
+                            SqlParameter[] answerParams =
+                            {
+                        new SqlParameter("@QuestionId", questionId),
+                        new SqlParameter("@AnswerText", answerText),
+                        new SqlParameter("@IsCorrect", isCorrect)
+                    };
+                            connection.ExecuteNonQueryWithParams(insertAnswerQuery, answerParams);
+                        }
+                    }
+
+                    MessageBox.Show("Question and answers updated successfully!");
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("An error occurred while updating the question: " + ex.Message);
+                }
             }
         }
 
         private void DeleteQuestion(int questionId)
         {
-            using (var connection = new Connection())
+            try
             {
-                string checkQuery = "SELECT COUNT(*) FROM Answers WHERE QuestionId = @QuestionId";
-                SqlParameter[] checkParameters = { new SqlParameter("@QuestionId", questionId) };
-                int answerCount = (int)connection.ExecuteScalar(checkQuery, checkParameters);
-
-                if (answerCount > 0)
+                using (var connection = new Connection())
                 {
-                    MessageBox.Show("Cannot delete the question because it has been answered by users.");
-                    return;
-                }
+                    string getTopicIdQuery = "SELECT TopicId FROM Questions WHERE Id = @QuestionId";
+                    SqlParameter[] getTopicIdParams = { new SqlParameter("@QuestionId", questionId) };
+                    object topicIdObj = connection.ExecuteScalar(getTopicIdQuery, getTopicIdParams);
 
-                string deleteQuery = "DELETE FROM Questions WHERE Id = @QuestionId";
-                SqlParameter[] parameters = { new SqlParameter("@QuestionId", questionId) };
-                connection.ExecuteNonQueryWithParams(deleteQuery, parameters);
-                MessageBox.Show("Question deleted successfully!");
+                    if (topicIdObj == null || topicIdObj == DBNull.Value)
+                    {
+                        MessageBox.Show("Question not found.");
+                        return;
+                    }
+
+                    int topicId = Convert.ToInt32(topicIdObj);
+
+                    string checkQuizResultsQuery = "SELECT COUNT(*) FROM QuizResults WHERE TopicId = @TopicId";
+                    SqlParameter[] checkQuizResultsParams = { new SqlParameter("@TopicId", topicId) };
+                    int quizResultsCount = (int)connection.ExecuteScalar(checkQuizResultsQuery, checkQuizResultsParams);
+
+                    if (quizResultsCount > 0)
+                    {
+                        MessageBox.Show("Cannot delete this question because its topic has been answered by users.");
+                        return;
+                    }
+
+
+                    string deleteAnswersQuery = "DELETE FROM Answers WHERE QuestionId = @QuestionId";
+                    SqlParameter[] answerParams = { new SqlParameter("@QuestionId", questionId) };
+                    connection.ExecuteNonQueryWithParams(deleteAnswersQuery, answerParams);
+
+                    string deleteQuestionQuery = "DELETE FROM Questions WHERE Id = @QuestionId";
+                    SqlParameter[] questionParams = { new SqlParameter("@QuestionId", questionId) };
+                    connection.ExecuteNonQueryWithParams(deleteQuestionQuery, questionParams);
+
+                    MessageBox.Show("Question and related answers deleted successfully!");
+                }
+            }catch(Exception ex)
+            {
+                MessageBox.Show("An error occurred while deleting the question: " + ex.Message);
             }
         }
 

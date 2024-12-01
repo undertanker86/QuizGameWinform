@@ -1,15 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows.Forms;
+﻿using System.Data;
 using System.Data.SqlClient;
 using QuizGame.Models.Connection;
-using System.Diagnostics;
 using QuizGame.Models;
 
 namespace QuizGame.Views
@@ -23,6 +14,81 @@ namespace QuizGame.Views
             InitializeComponent();
             LoadTopics();
         }
+        private string SaveImage(PictureBox pictureBox)
+        {
+            if (pictureBox != null && pictureBox.Image != null && pictureBox.Tag != null)
+            {
+                string originalImagePath = pictureBox.Tag.ToString();
+                string newFileName = Guid.NewGuid().ToString() + Path.GetExtension(originalImagePath);
+                string newImagePath = Path.Combine(Application.StartupPath, "images", newFileName);
+                File.Copy(originalImagePath, newImagePath, true);
+                return newImagePath;
+            }
+            return null;
+        }
+
+        private void SaveAnswers(Panel panel, int questionId, string questionType, Connection connection)
+        {
+            switch (questionType)
+            {
+                case "Multiple Choice":
+                    var answerPanels = panel.Controls.OfType<Panel>().ToList();
+
+                    foreach (var answerPanel in answerPanels)
+                    {
+                        var txtAnswer = answerPanel.Controls.OfType<TextBox>().FirstOrDefault();
+                        var btnCorrect = answerPanel.Controls.OfType<RadioButton>().FirstOrDefault();
+
+                        if (txtAnswer != null && btnCorrect != null)
+                        {
+                            string answerText = txtAnswer.Text;
+                            bool isCorrect = btnCorrect.Checked;
+
+                            string answerInsertQuery = "INSERT INTO Answers (QuestionId, AnswerText, IsCorrect) VALUES (@QuestionId, @AnswerText, @IsCorrect)";
+                            SqlParameter[] answerParams = new SqlParameter[]
+                            {
+                                new SqlParameter("@QuestionId", questionId),
+                                new SqlParameter("@AnswerText", answerText),
+                                new SqlParameter("@IsCorrect", isCorrect)
+                            };
+                            connection.ExecuteNonQueryWithParams(answerInsertQuery, answerParams);
+                        }
+                    }
+                    break;
+
+                case "Open-Ended":
+                    var txtOpenEndedAnswer = panel.Controls.OfType<TextBox>().Skip(1).FirstOrDefault();
+                    if (txtOpenEndedAnswer != null)
+                    {
+                        string openEndedAnswer = txtOpenEndedAnswer.Text;
+                        string openEndedInsertQuery = "INSERT INTO Answers (QuestionId, AnswerText, IsCorrect) VALUES (@QuestionId, @AnswerText, @IsCorrect)";
+                        SqlParameter[] openEndedParams = new SqlParameter[]
+                        {
+                            new SqlParameter("@QuestionId", questionId),
+                            new SqlParameter("@AnswerText", openEndedAnswer),
+                            new SqlParameter("@IsCorrect", true)
+                        };
+                        connection.ExecuteNonQueryWithParams(openEndedInsertQuery, openEndedParams);
+                    }
+                    break;
+
+                case "True/False":
+                    var trueFalseComboBox = panel.Controls.OfType<ComboBox>().Skip(1).FirstOrDefault();
+                    if (trueFalseComboBox != null && trueFalseComboBox.SelectedItem != null)
+                    {
+                        string trueFalseAnswer = trueFalseComboBox.SelectedItem.ToString();
+                        string trueFalseInsertQuery = "INSERT INTO Answers (QuestionId, AnswerText, IsCorrect) VALUES (@QuestionId, @AnswerText, @IsCorrect)";
+                        SqlParameter[] trueFalseParams = new SqlParameter[]
+                        {
+                            new SqlParameter("@QuestionId", questionId),
+                            new SqlParameter("@AnswerText", trueFalseAnswer),
+                            new SqlParameter("@IsCorrect", trueFalseAnswer == "True")
+                        };
+                        connection.ExecuteNonQueryWithParams(trueFalseInsertQuery, trueFalseParams);
+                    }
+                    break;
+            }
+        }
 
         private void LoadTopics()
         {
@@ -34,7 +100,7 @@ namespace QuizGame.Views
                         SELECT t.Id, t.Name
                         FROM Topics t
                         LEFT JOIN Questions q ON t.Id = q.TopicId
-                        WHERE q.Id IS NULL"; 
+                        WHERE q.Id IS NULL";
 
                     DataTable topics = connection.ExecuteQuery(query);
 
@@ -52,95 +118,141 @@ namespace QuizGame.Views
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Lỗi khi tải danh sách chủ đề: " + ex.Message);
+                MessageBox.Show("Error for load topic: " + ex.Message);
             }
+        }
+
+        private Panel CreateQuestionPanel(int questionNumber)
+        {
+            var questionPanel = new Panel
+            {
+                Size = new Size(900, 300),
+                Dock = DockStyle.Top,
+                BorderStyle = BorderStyle.FixedSingle,
+                Margin = new Padding(10)
+            };
+
+            var txtQuestion = new TextBox
+            {
+                PlaceholderText = $"Enter Question {questionNumber}",
+                Dock = DockStyle.Top,
+                Height = 30
+            };
+            questionPanel.Controls.Add(txtQuestion);
+
+            var comboBoxQuestionType = new ComboBox
+            {
+                Dock = DockStyle.Top,
+                Height = 30
+            };
+            comboBoxQuestionType.Items.AddRange(new string[] { "Multiple Choice", "Open-Ended", "True/False" });
+            comboBoxQuestionType.SelectedIndex = 0;
+            questionPanel.Controls.Add(comboBoxQuestionType);
+
+            var pictureBox = new PictureBox
+            {
+                Size = new Size(150, 150),
+                Dock = DockStyle.Left,
+                BorderStyle = BorderStyle.FixedSingle,
+                SizeMode = PictureBoxSizeMode.Zoom
+            };
+            questionPanel.Controls.Add(pictureBox);
+
+            var btnUploadImage = new Button
+            {
+                Text = "Upload Image",
+                Dock = DockStyle.Left,
+                Height = 30
+            };
+            btnUploadImage.Click += (s, args) =>
+            {
+                using (var openFileDialog = new OpenFileDialog())
+                {
+                    openFileDialog.Filter = "Image Files|*.jpg;*.jpeg;*.png;*.gif;*.bmp";
+                    if (openFileDialog.ShowDialog() == DialogResult.OK)
+                    {
+                        pictureBox.Image = Image.FromFile(openFileDialog.FileName);
+                        pictureBox.Tag = openFileDialog.FileName;
+                    }
+                }
+            };
+            questionPanel.Controls.Add(btnUploadImage);
+
+            comboBoxQuestionType.SelectedIndexChanged += (s, args) =>
+            {
+                questionPanel.Controls.Clear();
+                questionPanel.Controls.Add(txtQuestion);
+                questionPanel.Controls.Add(comboBoxQuestionType);
+                questionPanel.Controls.Add(pictureBox);
+                questionPanel.Controls.Add(btnUploadImage);
+
+                switch (comboBoxQuestionType.SelectedItem.ToString())
+                {
+                    case "Multiple Choice":
+                        for (int j = 0; j < 4; j++)
+                        {
+                            var panelAnswer = new Panel
+                            {
+                                Dock = DockStyle.Top,
+                                Height = 40
+                            };
+
+                            var txtAnswer = new TextBox
+                            {
+                                PlaceholderText = $"Answer {j + 1}",
+                                Dock = DockStyle.Left,
+                                Width = 600
+                            };
+                            panelAnswer.Controls.Add(txtAnswer);
+
+                            var btnCorrect = new RadioButton
+                            {
+                                Text = "Correct",
+                                Dock = DockStyle.Right,
+                                AutoSize = true
+                            };
+                            panelAnswer.Controls.Add(btnCorrect);
+
+                            questionPanel.Controls.Add(panelAnswer);
+                        }
+                        break;
+
+                    case "Open-Ended":
+                        var txtAnswerOpenEnded = new TextBox
+                        {
+                            PlaceholderText = "Answer",
+                            Dock = DockStyle.Bottom,
+                            Height = 30
+                        };
+                        questionPanel.Controls.Add(txtAnswerOpenEnded);
+                        break;
+
+                    case "True/False":
+                        var cbxAnswerTrueFalse = new ComboBox
+                        {
+                            Dock = DockStyle.Bottom,
+                            Height = 30
+                        };
+                        cbxAnswerTrueFalse.Items.AddRange(new string[] { "True", "False" });
+                        cbxAnswerTrueFalse.SelectedIndex = 0;
+                        questionPanel.Controls.Add(cbxAnswerTrueFalse);
+                        break;
+                }
+            };
+
+            return questionPanel;
         }
 
 
         private void btnCreateQuiz_Click(object sender, EventArgs e)
         {
-            int questionCount;
-            if (int.TryParse(txtSoluong.Text, out questionCount))
+            if (int.TryParse(txtSoluong.Text, out int questionCount))
             {
                 panelQuestions.Controls.Clear();
+
                 for (int i = 0; i < questionCount; i++)
                 {
-                    var questionPanel = new Panel
-                    {
-                        Size = new Size(900, 250),
-                        Dock = DockStyle.Top,
-                        BorderStyle = BorderStyle.FixedSingle,
-                        Margin = new Padding(115, 10, 10, 10)
-                    };
-
-                    var txtQuestion = new TextBox
-                    {
-                        PlaceholderText = $"Enter Question {i + 1}",
-                        Dock = DockStyle.Top,
-                        Height = 30
-                    };
-                    questionPanel.Controls.Add(txtQuestion);
-
-                    var comboBoxQuestionType = new ComboBox
-                    {
-                        Dock = DockStyle.Top,
-                        Height = 30
-                    };
-                    comboBoxQuestionType.Items.AddRange(new string[] { "Multiple Choice", "Open-Ended", "True/False" });
-                    comboBoxQuestionType.SelectedIndexChanged += (s, args) =>
-                    {
-                        questionPanel.Controls.Clear();
-                        questionPanel.Controls.Add(txtQuestion);
-                        questionPanel.Controls.Add(comboBoxQuestionType);
-
-                        switch (comboBoxQuestionType.SelectedItem.ToString())
-                        {
-                            case "Multiple Choice":
-                                for (int j = 0; j < 4; j++)
-                                {
-                                    var txtAnswer = new TextBox
-                                    {
-                                        PlaceholderText = $"Answer {j + 1}",
-                                        Dock = DockStyle.Bottom,
-                                        Height = 30
-                                    };
-                                    questionPanel.Controls.Add(txtAnswer);
-                                }
-
-                                var comboBoxIsCorrect = new ComboBox
-                                {
-                                    Dock = DockStyle.Bottom,
-                                    Height = 30
-                                };
-                                comboBoxIsCorrect.Items.AddRange(new string[] { "1", "2", "3", "4" });
-                                comboBoxIsCorrect.SelectedIndex = 0;
-                                questionPanel.Controls.Add(comboBoxIsCorrect);
-                                break;
-
-                            case "Open-Ended":
-                                var txtAnswerOpenEnded = new TextBox
-                                {
-                                    PlaceholderText = "Answer",
-                                    Dock = DockStyle.Bottom,
-                                    Height = 30
-                                };
-                                questionPanel.Controls.Add(txtAnswerOpenEnded);
-                                break;
-
-                            case "True/False":
-                                var cbxAnswerTrueFalse = new ComboBox
-                                {
-                                    Dock = DockStyle.Bottom,
-                                    Height = 30
-                                };
-                                cbxAnswerTrueFalse.Items.AddRange(new string[] { "True", "False" });
-                                cbxAnswerTrueFalse.SelectedIndex = 0;
-                                questionPanel.Controls.Add(cbxAnswerTrueFalse);
-                                break;
-                        }
-                    };
-
-                    questionPanel.Controls.Add(comboBoxQuestionType);
+                    var questionPanel = CreateQuestionPanel(i + 1);
                     panelQuestions.Controls.Add(questionPanel);
                 }
             }
@@ -165,6 +277,18 @@ namespace QuizGame.Views
                 return;
             }
 
+            DialogResult result = MessageBox.Show("Are you sure you want to save this quiz?", "Confirm Save", MessageBoxButtons.YesNo);
+            if (result != DialogResult.Yes)
+            {
+                return;
+            }
+
+            string imagesFolderPath = Path.Combine(Application.StartupPath, "images");
+            if (!Directory.Exists(imagesFolderPath))
+            {
+                Directory.CreateDirectory(imagesFolderPath);
+            }
+
             int selectedTopicId = (int)comboBoxTopicName.SelectedValue;
 
             using (var connection = new Connection())
@@ -175,71 +299,33 @@ namespace QuizGame.Views
                     {
                         if (questionPanel is Panel panel)
                         {
-                            string questionText = ((TextBox)panel.Controls[0]).Text;
-                            string questionType = ((ComboBox)panel.Controls[1]).SelectedItem.ToString();
+                            var txtQuestion = panel.Controls.OfType<TextBox>().FirstOrDefault();
+                            var comboBoxQuestionType = panel.Controls.OfType<ComboBox>().FirstOrDefault();
+                            var pictureBox = panel.Controls.OfType<PictureBox>().FirstOrDefault();
 
-                            string questionInsertQuery = "INSERT INTO Questions (TopicId, QuestionText, QuestionType) OUTPUT INSERTED.Id VALUES (@TopicId, @QuestionText, @QuestionType)";
+                            if (txtQuestion == null || comboBoxQuestionType == null || comboBoxQuestionType.SelectedItem == null)
+                            {
+                                MessageBox.Show("Missing question text or type.");
+                                continue;
+                            }
+
+                            string questionText = txtQuestion.Text;
+                            string questionType = comboBoxQuestionType.SelectedItem.ToString();
+                            string imagePath = SaveImage(pictureBox);
+
+                            string questionInsertQuery = "INSERT INTO Questions (TopicId, QuestionText, QuestionType, image) OUTPUT INSERTED.Id VALUES (@TopicId, @QuestionText, @QuestionType, @ImagePath)";
                             SqlParameter[] questionParams = new SqlParameter[]
                             {
                                 new SqlParameter("@TopicId", selectedTopicId),
                                 new SqlParameter("@QuestionText", questionText),
-                                new SqlParameter("@QuestionType", questionType)
+                                new SqlParameter("@QuestionType", questionType),
+                                new SqlParameter("@ImagePath", (object)imagePath ?? DBNull.Value)
                             };
 
                             int questionId = (int)connection.ExecuteScalar(questionInsertQuery, questionParams);
 
-                            switch (questionType)
-                            {
-                                case "Multiple Choice":
-                                    var comboBoxIsCorrect = (ComboBox)panel.Controls[panel.Controls.Count - 1];
-                                    int correctAnswerIndex = Convert.ToInt32(comboBoxIsCorrect.SelectedItem);
-
-                                    for (int i = 2; i < panel.Controls.Count - 1; i++)
-                                    {
-                                        var txtAnswer = panel.Controls[i] as TextBox;
-                                        if (txtAnswer != null)
-                                        {
-                                            string answerText = txtAnswer.Text;
-                                            bool isCorrect = (i - 2) == correctAnswerIndex;
-
-                                            string answerInsertQuery = "INSERT INTO Answers (QuestionId, AnswerText, IsCorrect) VALUES (@QuestionId, @AnswerText, @IsCorrect)";
-                                            SqlParameter[] answerParams = new SqlParameter[]
-                                            {
-                                        new SqlParameter("@QuestionId", questionId),
-                                        new SqlParameter("@AnswerText", answerText),
-                                        new SqlParameter("@IsCorrect", isCorrect)
-                                            };
-                                            connection.ExecuteNonQueryWithParams(answerInsertQuery, answerParams);
-                                        }
-                                    }
-                                    break;
-
-                                case "Open-Ended":
-                                    var openEndedAnswer = (TextBox)panel.Controls[2];
-                                    string openEndedText = openEndedAnswer.Text;
-                                    string openEndedInsertQuery = "INSERT INTO Answers (QuestionId, AnswerText, IsCorrect) VALUES (@QuestionId, @AnswerText, @IsCorrect)";
-                                    SqlParameter[] openEndedParams = new SqlParameter[]
-                                    {
-                                new SqlParameter("@QuestionId", questionId),
-                                new SqlParameter("@AnswerText", openEndedText),
-                                new SqlParameter("@IsCorrect", false)
-                                    };
-                                    connection.ExecuteNonQueryWithParams(openEndedInsertQuery, openEndedParams);
-                                    break;
-
-                                case "True/False":
-                                    var trueFalseAnswer = (ComboBox)panel.Controls[2];
-                                    string trueFalseText = trueFalseAnswer.SelectedItem.ToString();
-                                    string trueFalseInsertQuery = "INSERT INTO Answers (QuestionId, AnswerText, IsCorrect) VALUES (@QuestionId, @AnswerText, @IsCorrect)";
-                                    SqlParameter[] trueFalseParams = new SqlParameter[]
-                                    {
-                                new SqlParameter("@QuestionId", questionId),
-                                new SqlParameter("@AnswerText", trueFalseText),
-                                new SqlParameter("@IsCorrect", trueFalseText == "True")
-                                    };
-                                    connection.ExecuteNonQueryWithParams(trueFalseInsertQuery, trueFalseParams);
-                                    break;
-                            }
+                            // Lưu câu trả lời theo loại
+                            SaveAnswers(panel, questionId, questionType, connection);
                         }
                     }
 
@@ -251,7 +337,5 @@ namespace QuizGame.Views
                 }
             }
         }
-
-
     }
 }

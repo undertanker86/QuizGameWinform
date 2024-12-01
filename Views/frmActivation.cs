@@ -9,12 +9,16 @@ namespace QuizGame.Views
     {
         private string userEmail; // Save email user
         private bool isPasswordReset; // Kiểm tra xem có phải quá trình reset mật khẩu không
+        private string oldEmail; // Lưu email cũ để so sánh khi đổi email
 
-        public frmActivation(string email, bool isPasswordReset = false)
+
+        public frmActivation(string email, bool isPasswordReset = false, string oldEmail = "")
         {
             InitializeComponent();
             userEmail = email;
             this.isPasswordReset = isPasswordReset;
+            this.oldEmail = oldEmail;
+
             // Nếu là quá trình reset mật khẩu, có thể hiển thị thông báo khác
             if (isPasswordReset)
             {
@@ -44,27 +48,19 @@ namespace QuizGame.Views
                 Guid activationCode = Guid.Parse(activationCodeInput);
                 Connection connection = new Connection();
 
-                // Nếu là reset mật khẩu, sẽ kiểm tra ResetToken thay vì ActivationCode
+                // Xác định câu truy vấn tùy thuộc vào việc reset mật khẩu hay kích hoạt tài khoản
                 string query = isPasswordReset
                     ? "SELECT UserId FROM Users WHERE ResetToken = @ResetToken AND Email = @Email AND ResetTokenExpiry > GETDATE()"
                     : "SELECT UserId FROM Users WHERE ActivationCode = @ActivationCode AND Email = @Email AND IsActivated = 0";
 
+                // Khai báo SqlParameter và gán giá trị vào tùy thuộc vào quá trình
                 SqlParameter[] parameters = new SqlParameter[]
                 {
-                    new SqlParameter("@ActivationCode", activationCode),
-                    new SqlParameter("@Email", userEmail)
+                new SqlParameter(isPasswordReset ? "@ResetToken" : "@ActivationCode", activationCode),
+                new SqlParameter("@Email", userEmail)
                 };
 
-                if (isPasswordReset)
-                {
-                    // Cập nhật câu truy vấn cho trường hợp reset password
-                    parameters = new SqlParameter[]
-                    {
-                        new SqlParameter("@ResetToken", activationCode),
-                        new SqlParameter("@Email", userEmail)
-                    };
-                }
-
+                // Mở kết nối và thực thi câu truy vấn
                 connection.OpenConnection();
                 var result = connection.ExecuteScalar(query, parameters);
                 connection.CloseConnection();
@@ -82,8 +78,16 @@ namespace QuizGame.Views
                     {
                         // Nếu là kích hoạt tài khoản, cập nhật trạng thái tài khoản
                         string updateQuery = "UPDATE Users SET IsActivated = 1 WHERE ActivationCode = @ActivationCode AND Email = @Email";
+
+                        // Dùng riêng một bộ tham số mới cho câu truy vấn UPDATE
+                        SqlParameter[] updateParameters = new SqlParameter[]
+                        {
+                    new SqlParameter("@ActivationCode", activationCode),
+                    new SqlParameter("@Email", userEmail)
+                        };
+
                         connection.OpenConnection();
-                        int rowsAffected = connection.ExecuteNonQuery(updateQuery, parameters);
+                        int rowsAffected = connection.ExecuteNonQuery(updateQuery, updateParameters);
                         connection.CloseConnection();
 
                         if (rowsAffected > 0)

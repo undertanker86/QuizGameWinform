@@ -47,6 +47,7 @@
             // 
             // panelQuestions
             // 
+            panelQuestions.AutoScroll = true;
             panelQuestions.BackColor = SystemColors.ButtonHighlight;
             panelQuestions.Font = new Font("Sitka Small", 14.25F, FontStyle.Bold);
             panelQuestions.Location = new Point(81, 365);

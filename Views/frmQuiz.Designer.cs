@@ -31,9 +31,11 @@
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(frmQuiz));
             lblQuestion = new Label();
             panelAnswers = new Panel();
+            pictureBoxQuestion = new PictureBox();
             btnNext = new Button();
             lblResult = new Label();
             lblTimer = new Label();
+            ((System.ComponentModel.ISupportInitialize)pictureBoxQuestion).BeginInit();
             SuspendLayout();
             // 
             // lblQuestion
@@ -56,6 +58,15 @@
             panelAnswers.Name = "panelAnswers";
             panelAnswers.Size = new Size(1036, 653);
             panelAnswers.TabIndex = 1;
+            // 
+            // pictureBoxQuestion
+            // 
+            pictureBoxQuestion.Location = new Point(753, 61);
+            pictureBoxQuestion.Name = "pictureBoxQuestion";
+            pictureBoxQuestion.Size = new Size(359, 180);
+            pictureBoxQuestion.SizeMode = PictureBoxSizeMode.Zoom;
+            pictureBoxQuestion.TabIndex = 5;
+            pictureBoxQuestion.TabStop = false;
             // 
             // btnNext
             // 
@@ -98,6 +109,7 @@
             AutoScaleMode = AutoScaleMode.Font;
             BackColor = SystemColors.ActiveCaption;
             ClientSize = new Size(1519, 1127);
+            Controls.Add(pictureBoxQuestion);
             Controls.Add(lblTimer);
             Controls.Add(lblResult);
             Controls.Add(btnNext);
@@ -108,6 +120,9 @@
             Name = "frmQuiz";
             StartPosition = FormStartPosition.CenterScreen;
             Text = "QUIZGAME";
+            FormClosing += frmQuiz_FormClosing;
+            Load += frmQuiz_Load;
+            ((System.ComponentModel.ISupportInitialize)pictureBoxQuestion).EndInit();
             ResumeLayout(false);
             PerformLayout();
         }
@@ -119,5 +134,6 @@
         private Button btnNext;
         private Label lblResult;
         private Label lblTimer;
+        private PictureBox pictureBoxQuestion;
     }
 }

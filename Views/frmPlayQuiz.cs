@@ -1,11 +1,6 @@
-﻿using System;
-using System.Data;
-using System.Windows.Forms;
+﻿using System.Data;
 using System.Data.SqlClient;
 using QuizGame.Models.Connection;
-using Microsoft.EntityFrameworkCore.Metadata.Internal;
-using QuizGame.Models;
-using System.Drawing;
 
 namespace QuizGame.Views
 {

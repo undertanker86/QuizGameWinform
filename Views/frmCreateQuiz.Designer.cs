@@ -31,11 +31,11 @@
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(frmCreateQuiz));
             btnCreateQuiz = new Button();
             txtSoluong = new TextBox();
-            panelQuestions = new FlowLayoutPanel();
             btnSave = new Button();
             comboBoxTopicName = new ComboBox();
             label1 = new Label();
             label2 = new Label();
+            panelQuestions = new Panel();
             SuspendLayout();
             // 
             // btnCreateQuiz
@@ -61,17 +61,6 @@
             txtSoluong.Name = "txtSoluong";
             txtSoluong.Size = new Size(208, 47);
             txtSoluong.TabIndex = 2;
-            // 
-            // panelQuestions
-            // 
-            panelQuestions.AutoScroll = true;
-            panelQuestions.BackColor = SystemColors.GradientInactiveCaption;
-            panelQuestions.Font = new Font("Sitka Small", 14.25F, FontStyle.Regular, GraphicsUnit.Point, 0);
-            panelQuestions.Location = new Point(86, 233);
-            panelQuestions.Margin = new Padding(4, 5, 4, 5);
-            panelQuestions.Name = "panelQuestions";
-            panelQuestions.Size = new Size(1727, 871);
-            panelQuestions.TabIndex = 3;
             // 
             // btnSave
             // 
@@ -118,17 +107,26 @@
             label2.TabIndex = 7;
             label2.Text = "Number of questions:";
             // 
+            // panelQuestions
+            // 
+            panelQuestions.AutoScroll = true;
+            panelQuestions.BackColor = SystemColors.ButtonHighlight;
+            panelQuestions.Location = new Point(66, 208);
+            panelQuestions.Name = "panelQuestions";
+            panelQuestions.Size = new Size(1465, 710);
+            panelQuestions.TabIndex = 8;
+            // 
             // frmCreateQuiz
             // 
             AutoScaleDimensions = new SizeF(10F, 25F);
             AutoScaleMode = AutoScaleMode.Font;
             BackColor = SystemColors.ActiveCaption;
             ClientSize = new Size(1898, 1160);
+            Controls.Add(panelQuestions);
             Controls.Add(label2);
             Controls.Add(label1);
             Controls.Add(comboBoxTopicName);
             Controls.Add(btnSave);
-            Controls.Add(panelQuestions);
             Controls.Add(txtSoluong);
             Controls.Add(btnCreateQuiz);
             Icon = (Icon)resources.GetObject("$this.Icon");
@@ -144,10 +142,10 @@
 
         private Button btnCreateQuiz;
         private TextBox txtSoluong;
-        private FlowLayoutPanel panelQuestions;
         private Button btnSave;
         private ComboBox comboBoxTopicName;
         private Label label1;
         private Label label2;
+        private Panel panelQuestions;
     }
 }

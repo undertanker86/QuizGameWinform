@@ -70,7 +70,7 @@
             // pictureBox1
             // 
             pictureBox1.Image = (Image)resources.GetObject("pictureBox1.Image");
-            pictureBox1.Location = new Point(39, 45);
+            pictureBox1.Location = new Point(39, 5);
             pictureBox1.Margin = new Padding(4, 5, 4, 5);
             pictureBox1.Name = "pictureBox1";
             pictureBox1.Size = new Size(431, 437);
@@ -82,10 +82,10 @@
             // 
             button1.BackColor = Color.MistyRose;
             button1.Font = new Font("Sitka Small", 18F, FontStyle.Bold);
-            button1.Location = new Point(-1, 865);
+            button1.Location = new Point(1, 929);
             button1.Margin = new Padding(4, 5, 4, 5);
             button1.Name = "button1";
-            button1.Size = new Size(510, 106);
+            button1.Size = new Size(510, 64);
             button1.TabIndex = 9;
             button1.Text = "Log out";
             button1.UseVisualStyleBackColor = false;
@@ -95,10 +95,10 @@
             // 
             btnEditInfo.BackColor = Color.MistyRose;
             btnEditInfo.Font = new Font("Sitka Small", 18F, FontStyle.Bold);
-            btnEditInfo.Location = new Point(-1, 751);
+            btnEditInfo.Location = new Point(0, 843);
             btnEditInfo.Margin = new Padding(4, 5, 4, 5);
             btnEditInfo.Name = "btnEditInfo";
-            btnEditInfo.Size = new Size(510, 104);
+            btnEditInfo.Size = new Size(510, 61);
             btnEditInfo.TabIndex = 8;
             btnEditInfo.Text = "Edit Info";
             btnEditInfo.UseVisualStyleBackColor = false;
@@ -108,10 +108,10 @@
             // 
             btn_PlayQuiz.BackColor = Color.MistyRose;
             btn_PlayQuiz.Font = new Font("Sitka Small", 18F, FontStyle.Bold);
-            btn_PlayQuiz.Location = new Point(-1, 523);
+            btn_PlayQuiz.Location = new Point(1, 674);
             btn_PlayQuiz.Margin = new Padding(4, 5, 4, 5);
             btn_PlayQuiz.Name = "btn_PlayQuiz";
-            btn_PlayQuiz.Size = new Size(507, 92);
+            btn_PlayQuiz.Size = new Size(507, 60);
             btn_PlayQuiz.TabIndex = 6;
             btn_PlayQuiz.Text = "Play Quiz";
             btn_PlayQuiz.UseVisualStyleBackColor = false;
@@ -121,10 +121,10 @@
             // 
             btnViewResult.BackColor = Color.MistyRose;
             btnViewResult.Font = new Font("Sitka Small", 18F, FontStyle.Bold);
-            btnViewResult.Location = new Point(0, 636);
+            btnViewResult.Location = new Point(1, 764);
             btnViewResult.Margin = new Padding(4, 5, 4, 5);
             btnViewResult.Name = "btnViewResult";
-            btnViewResult.Size = new Size(510, 105);
+            btnViewResult.Size = new Size(510, 60);
             btnViewResult.TabIndex = 7;
             btnViewResult.Text = "View Result";
             btnViewResult.UseVisualStyleBackColor = false;
@@ -158,7 +158,7 @@
             AutoScaleDimensions = new SizeF(10F, 25F);
             AutoScaleMode = AutoScaleMode.Font;
             BackColor = SystemColors.ActiveCaption;
-            ClientSize = new Size(1898, 1160);
+            ClientSize = new Size(1878, 1105);
             Controls.Add(lblRank);
             Controls.Add(label1);
             Controls.Add(panel1);

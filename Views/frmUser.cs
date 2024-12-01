@@ -166,6 +166,8 @@ namespace QuizGame.Views
         {
             if (e.RowIndex >= 0)
             {
+                txtEmail.Enabled = false;
+                txtPassword.Enabled = false;
                 DataGridViewRow row = dgvUsers.Rows[e.RowIndex];
                 txtFullName.Text = row.Cells["FullName"].Value.ToString();
                 dtpDateOfBirth.Value = Convert.ToDateTime(row.Cells["DateOfBirth"].Value);
@@ -184,6 +186,8 @@ namespace QuizGame.Views
             dtpDateOfBirth.Value = DateTime.Now;
             cbxGender.SelectedIndex = -1;
             comboBoxRole.SelectedIndex = 1;
+            txtEmail.Enabled = true;
+            txtPassword.Enabled = true;
         }
 
         private string ComputeSha256Hash(string rawData)

@@ -61,7 +61,8 @@ namespace QuizGame.Views
                     var comboBoxQuestionType = new ComboBox
                     {
                         Dock = DockStyle.Top,
-                        Height = 30
+                        Height = 30,
+                        Enabled = false // Khóa để không thể thay đổi loại câu hỏi
                     };
                     comboBoxQuestionType.Items.AddRange(new string[] { "Multiple Choice", "Open-Ended", "True/False" });
                     comboBoxQuestionType.SelectedItem = row["QuestionType"].ToString();
@@ -247,25 +248,66 @@ namespace QuizGame.Views
                         return;
                     }
 
-                    foreach (Control answerPanel in questionPanel.Controls.OfType<Panel>())
+                    switch (questionType)
                     {
-                        var txtAnswer = answerPanel.Controls.OfType<TextBox>().FirstOrDefault();
-                        var chkCorrect = answerPanel.Controls.OfType<CheckBox>().FirstOrDefault();
-
-                        if (txtAnswer != null && chkCorrect != null)
-                        {
-                            string answerText = txtAnswer.Text;
-                            bool isCorrect = chkCorrect.Checked;
-
-                            string insertAnswerQuery = "INSERT INTO Answers (QuestionId, AnswerText, IsCorrect) VALUES (@QuestionId, @AnswerText, @IsCorrect)";
-                            SqlParameter[] answerParams =
+                        case "Multiple Choice":
+                            foreach (Control answerPanel in questionPanel.Controls.OfType<Panel>())
                             {
-                        new SqlParameter("@QuestionId", questionId),
-                        new SqlParameter("@AnswerText", answerText),
-                        new SqlParameter("@IsCorrect", isCorrect)
-                    };
-                            connection.ExecuteNonQueryWithParams(insertAnswerQuery, answerParams);
-                        }
+                                var txtAnswer = answerPanel.Controls.OfType<TextBox>().FirstOrDefault();
+                                var chkCorrect = answerPanel.Controls.OfType<CheckBox>().FirstOrDefault();
+
+                                if (txtAnswer != null && chkCorrect != null)
+                                {
+                                    string answerText = txtAnswer.Text;
+                                    bool isCorrect = chkCorrect.Checked;
+
+                                    string insertAnswerQuery = "INSERT INTO Answers (QuestionId, AnswerText, IsCorrect) VALUES (@QuestionId, @AnswerText, @IsCorrect)";
+                                    SqlParameter[] answerParams =
+                                    {
+                                new SqlParameter("@QuestionId", questionId),
+                                new SqlParameter("@AnswerText", answerText),
+                                new SqlParameter("@IsCorrect", isCorrect ? 1 : 0)
+                            };
+                                    connection.ExecuteNonQueryWithParams(insertAnswerQuery, answerParams);
+                                }
+                            }
+                            break;
+
+                        case "Open-Ended":
+                            var openEndedAnswer = questionPanel.Controls.OfType<TextBox>().Skip(1).FirstOrDefault();
+                            if (openEndedAnswer != null)
+                            {
+                                string insertAnswerQuery = "INSERT INTO Answers (QuestionId, AnswerText, IsCorrect) VALUES (@QuestionId, @AnswerText, @IsCorrect)";
+                                SqlParameter[] answerParams =
+                                {
+                            new SqlParameter("@QuestionId", questionId),
+                            new SqlParameter("@AnswerText", openEndedAnswer.Text),
+                            new SqlParameter("@IsCorrect", 1)
+                        };
+                                connection.ExecuteNonQueryWithParams(insertAnswerQuery, answerParams);
+                            }
+                            break;
+
+                        case "True/False":
+                            var trueFalseComboBox = questionPanel.Controls.OfType<ComboBox>().Skip(1).FirstOrDefault();
+                            if (trueFalseComboBox != null && trueFalseComboBox.SelectedItem != null)
+                            {
+                                string selectedAnswer = trueFalseComboBox.SelectedItem.ToString();
+
+                                string insertAnswerQuery = "INSERT INTO Answers (QuestionId, AnswerText, IsCorrect) VALUES (@QuestionId, @AnswerText, @IsCorrect)";
+                                SqlParameter[] answerParams =
+                                {
+                            new SqlParameter("@QuestionId", questionId),
+                            new SqlParameter("@AnswerText", selectedAnswer),
+                            new SqlParameter("@IsCorrect", 1)
+                        };
+                                connection.ExecuteNonQueryWithParams(insertAnswerQuery, answerParams);
+                            }
+                            break;
+
+                        default:
+                            MessageBox.Show("Unsupported question type.");
+                            break;
                     }
 
                     MessageBox.Show("Question and answers updated successfully!");

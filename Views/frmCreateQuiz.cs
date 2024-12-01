@@ -73,16 +73,35 @@ namespace QuizGame.Views
                     break;
 
                 case "True/False":
+                    //var trueFalseComboBox = panel.Controls.OfType<ComboBox>().Skip(1).FirstOrDefault();
+                    //if (trueFalseComboBox != null && trueFalseComboBox.SelectedItem != null)
+                    //{
+                    //    string trueFalseAnswer = trueFalseComboBox.SelectedItem.ToString();
+                    //    string trueFalseInsertQuery = "INSERT INTO Answers (QuestionId, AnswerText, IsCorrect) VALUES (@QuestionId, @AnswerText, @IsCorrect)";
+                    //    SqlParameter[] trueFalseParams = new SqlParameter[]
+                    //    {
+                    //        new SqlParameter("@QuestionId", questionId),
+                    //        new SqlParameter("@AnswerText", trueFalseAnswer),
+                    //        new SqlParameter("@IsCorrect", trueFalseAnswer == "True")
+                    //    };
+                    //    connection.ExecuteNonQueryWithParams(trueFalseInsertQuery, trueFalseParams);
+                    //}
+                    //break;
                     var trueFalseComboBox = panel.Controls.OfType<ComboBox>().Skip(1).FirstOrDefault();
                     if (trueFalseComboBox != null && trueFalseComboBox.SelectedItem != null)
                     {
                         string trueFalseAnswer = trueFalseComboBox.SelectedItem.ToString();
+
+                        // Nếu đáp án là "True" hoặc "False", ta xác định đáp án đúng bằng cách so sánh với lựa chọn người dùng
+                        //bool isCorrect = trueFalseAnswer == "True" ? true : false;  // Nếu "True" là đáp án đúng thì IsCorrect = 1
+                        int isCorrect = 1;  // Nếu "True" là đáp án đúng thì IsCorrect = 1
+
                         string trueFalseInsertQuery = "INSERT INTO Answers (QuestionId, AnswerText, IsCorrect) VALUES (@QuestionId, @AnswerText, @IsCorrect)";
                         SqlParameter[] trueFalseParams = new SqlParameter[]
                         {
                             new SqlParameter("@QuestionId", questionId),
                             new SqlParameter("@AnswerText", trueFalseAnswer),
-                            new SqlParameter("@IsCorrect", trueFalseAnswer == "True")
+                            new SqlParameter("@IsCorrect", isCorrect)  // Gán 1 nếu đúng, 0 nếu sai
                         };
                         connection.ExecuteNonQueryWithParams(trueFalseInsertQuery, trueFalseParams);
                     }

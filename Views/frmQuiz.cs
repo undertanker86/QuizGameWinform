@@ -196,6 +196,20 @@ namespace QuizGame.Views
         {
             bool isCorrect = false;
             string questionType = questions.Rows[currentQuestionIndex]["QuestionType"].ToString();
+            string correctAnswers = "";  // Biến để lưu các đáp án đúng
+                                         // Lấy thông tin đáp án đúng từ cơ sở dữ liệu
+            int questionId_tmp = (int)questions.Rows[currentQuestionIndex]["Id"];
+            using (var connection = new Connection())
+            {
+                string query = "SELECT AnswerText FROM Answers WHERE QuestionId = @QuestionId AND IsCorrect = 1";
+                SqlParameter[] parameters = new SqlParameter[] { new SqlParameter("@QuestionId", questionId_tmp) };
+                DataTable correctAnswerTable = connection.ExecuteQuery(query, parameters);
+
+                foreach (DataRow row in correctAnswerTable.Rows)
+                {
+                    correctAnswers += row["AnswerText"].ToString() + "\n"; // Thêm đáp án đúng vào chuỗi
+                }
+            }
 
             if (questionType == "Multiple Choice")
             {
@@ -289,6 +303,8 @@ namespace QuizGame.Views
             {
                 score += 10;
             }
+            // Hiển thị đáp án đúng
+            MessageBox.Show($"Correct Answers for this question:\n{correctAnswers}");
 
             lblResult.Text = "Total Score: " + score;
             currentQuestionIndex++;

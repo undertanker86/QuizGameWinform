@@ -75,7 +75,7 @@ namespace QuizGame.Models.Connection
                 }
                 catch (SqlException ex)
                 {
-                    Console.WriteLine($"Lỗi thực hiện truy vấn: {ex.Message}");
+                    Console.WriteLine($"Error for query: {ex.Message}");
                     throw; // Ném lại ngoại lệ để xử lý bên ngoài
                 }
                 finally

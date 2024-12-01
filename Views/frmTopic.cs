@@ -101,12 +101,34 @@ namespace QuizGame.Views
             if (dgvTopics.SelectedRows.Count > 0)
             {
                 int selectedId = (int)dgvTopics.SelectedRows[0].Cells["Id"].Value;
+
+                // Kiểm tra xem có câu hỏi nào liên kết với chủ đề này không
+                string checkQuery = "SELECT COUNT(*) FROM [Questions] WHERE [TopicId] = @TopicId";
+                SqlParameter[] checkParams = { new SqlParameter("@TopicId", selectedId) };
+                int questionCount = (int)_connection.ExecuteScalar(checkQuery, checkParams);
+
+                if (questionCount > 0)
+                {
+                    // Nếu có câu hỏi liên quan, không cho phép xóa topic và thông báo lỗi
+                    MessageBox.Show("Cannot delete the topic. Please delete the related questions first.");
+                    return;
+                }
+
+                // Nếu không có câu hỏi liên quan, thực hiện xóa chủ đề
                 string query = "DELETE FROM [Topics] WHERE [Id] = @Id";
                 SqlParameter[] parameters = { new SqlParameter("@Id", selectedId) };
 
-                _connection.ExecuteNonQueryWithParams(query, parameters);
-                MessageBox.Show("Topic deleted.");
-                LoadTopics(); 
+                try
+                {
+                    _connection.ExecuteNonQueryWithParams(query, parameters);
+                    MessageBox.Show("Topic deleted.");
+                    LoadTopics();
+                }
+                catch (Exception ex)
+                {
+                    // Nếu có lỗi xảy ra trong quá trình xóa, hiển thị thông báo lỗi
+                    MessageBox.Show($"Error occurred while deleting the topic: {ex.Message}");
+                }
             }
             else
             {

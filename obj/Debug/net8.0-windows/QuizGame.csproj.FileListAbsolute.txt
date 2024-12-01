@@ -600,4 +600,4 @@ C:\Users\Asus\OneDrive\Documents\QuizGame\QuizGame\QuizGame\obj\Debug\net8.0-win
 C:\Users\Asus\OneDrive\Documents\QuizGame\QuizGame\QuizGame\obj\Debug\net8.0-windows\QuizGame.Views.frmActivation.resources
 C:\Users\Asus\OneDrive\Documents\QuizGame\QuizGame\QuizGame\obj\Debug\net8.0-windows\QuizGame.Views.frmForgotPassword.resources
 C:\Users\Asus\OneDrive\Documents\QuizGame\QuizGame\QuizGame\obj\Debug\net8.0-windows\QuizGame.Views.frmResetPassword.resources
-C:\Users\Asus\OneDrive\Documents\QuizGame\QuizGame\QuizGame\obj\Debug\net8.0-windows\QuizGame.Views.frmTokenVerification.resources
+C:\Users\Asus\OneDrive\Documents\QuizGame\QuizGame\QuizGame\obj\Debug\net8.0-windows\QuizGame.sourcelink.json

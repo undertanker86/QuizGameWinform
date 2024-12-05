@@ -29,14 +29,15 @@ namespace QuizGame.Views
             {
                 using (var connection = new Connection())
                 {
-                    string query = "SELECT T.Name AS Topic, QR.DateTaken, QR.Score " +
+                    string query = "SELECT T.Name AS Topic, QR.DateTaken, QR.Score, QR.DateDuring " +
                                    "FROM QuizResults QR " +
                                    "JOIN Topics T ON QR.TopicId = T.Id " +
                                    "WHERE QR.UserId = @UserId ORDER BY QR.DateTaken DESC";
 
-                    SqlParameter[] parameters = new SqlParameter[] {
+                    SqlParameter[] parameters = new SqlParameter[]
+                    {
                 new SqlParameter("@UserId", currentUserId)
-            };
+                    };
 
                     Console.WriteLine("Executing Query: " + query);
                     Console.WriteLine("Parameters: UserId = " + currentUserId);
@@ -45,14 +46,33 @@ namespace QuizGame.Views
 
                     if (quizResults.Rows.Count > 0)
                     {
+                        // Thêm cột mới cho DateDuring đã định dạng
+                        quizResults.Columns.Add("TimeSpent", typeof(string));
+
+                        foreach (DataRow row in quizResults.Rows)
+                        {
+                            if (int.TryParse(row["DateDuring"].ToString(), out int totalSeconds))
+                            {
+                                TimeSpan timeSpan = TimeSpan.FromSeconds(totalSeconds);
+                                row["TimeSpent"] = $"{(int)timeSpan.TotalMinutes:D2}:{timeSpan.Seconds:D2}";
+                            }
+                            else
+                            {
+                                row["TimeSpent"] = "00:00";
+                            }
+                        }
+
+                        // Thiết lập DataSource cho DataGridView
                         dgvResults.DataSource = quizResults;
 
-                        int totalWidth = dgvResults.Width;
-                        int columnWidth = totalWidth / 3;
+                        // Đặt lại các cột trong DataGridView
+                        dgvResults.Columns["Topic"].Width = dgvResults.Width / 4;
+                        dgvResults.Columns["DateTaken"].Width = dgvResults.Width / 4;
+                        dgvResults.Columns["Score"].Width = dgvResults.Width / 4;
+                        dgvResults.Columns["TimeSpent"].Width = dgvResults.Width / 4;
 
-                        dgvResults.Columns[0].Width = columnWidth; // Topic
-                        dgvResults.Columns[1].Width = columnWidth; // DateTaken
-                        dgvResults.Columns[2].Width = columnWidth; // Score
+                        // Đổi tên cột mới
+                        dgvResults.Columns["TimeSpent"].HeaderText = "Time During (mm:ss)";
                     }
                     else
                     {

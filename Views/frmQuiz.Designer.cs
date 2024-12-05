@@ -63,7 +63,7 @@
             // 
             pictureBoxQuestion.Location = new Point(753, 61);
             pictureBoxQuestion.Name = "pictureBoxQuestion";
-            pictureBoxQuestion.Size = new Size(359, 180);
+            pictureBoxQuestion.Size = new Size(510, 180);
             pictureBoxQuestion.SizeMode = PictureBoxSizeMode.Zoom;
             pictureBoxQuestion.TabIndex = 5;
             pictureBoxQuestion.TabStop = false;
@@ -72,7 +72,7 @@
             // 
             btnNext.BackColor = Color.IndianRed;
             btnNext.Font = new Font("Sitka Small", 14.25F, FontStyle.Bold);
-            btnNext.Location = new Point(1291, 1012);
+            btnNext.Location = new Point(1202, 923);
             btnNext.Margin = new Padding(4, 5, 4, 5);
             btnNext.Name = "btnNext";
             btnNext.Size = new Size(210, 93);
@@ -96,7 +96,7 @@
             // 
             lblTimer.AutoSize = true;
             lblTimer.Font = new Font("Sitka Small", 14.25F, FontStyle.Bold);
-            lblTimer.Location = new Point(1211, 37);
+            lblTimer.Location = new Point(1153, 9);
             lblTimer.Margin = new Padding(4, 0, 4, 0);
             lblTimer.Name = "lblTimer";
             lblTimer.Size = new Size(110, 43);
@@ -108,7 +108,7 @@
             AutoScaleDimensions = new SizeF(10F, 25F);
             AutoScaleMode = AutoScaleMode.Font;
             BackColor = SystemColors.ActiveCaption;
-            ClientSize = new Size(1519, 1127);
+            ClientSize = new Size(1519, 1016);
             Controls.Add(pictureBoxQuestion);
             Controls.Add(lblTimer);
             Controls.Add(lblResult);

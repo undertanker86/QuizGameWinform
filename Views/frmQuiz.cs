@@ -15,8 +15,9 @@ namespace QuizGame.Views
         private DataTable questions;
         private int score = 0;
         private System.Windows.Forms.Timer quizTimer;
-        private int timeLeft = 30;
+        private int timeLeft = 20;
         private bool isQuizCompleted = false;
+        private DateTime timeStart;
 
         public frmQuiz(int topicId, int userId)
         {
@@ -29,6 +30,7 @@ namespace QuizGame.Views
             quizTimer.Tick += QuizTimer_Tick;
 
             LoadQuestions();
+            timeStart = DateTime.Now;
             DisplayCurrentQuestion();
             lblResult.Text = "Total Score: " + score;
         }
@@ -326,14 +328,20 @@ namespace QuizGame.Views
 
         private void SaveQuizResult()
         {
-            string query = "INSERT INTO QuizResults (UserId, TopicId, DateTaken, Score) VALUES (@UserId, @TopicId, @DateTaken, @Score)";
+            DateTime timeTaken = DateTime.Now;
+            TimeSpan timeSpent = timeTaken - timeStart;
+            int totalTimeInSeconds = (int)timeSpent.TotalSeconds;  
+       
+
+            string query = "INSERT INTO QuizResults (UserId, TopicId, Score, DateTaken, DateDuring) VALUES (@UserId, @TopicId, @Score, @DateTaken, @DateDuring)";
 
             SqlParameter[] parameters = new SqlParameter[]
             {
-                new SqlParameter("@UserId", currentUserId),
-                new SqlParameter("@TopicId", topicId),
-                new SqlParameter("@DateTaken", DateTime.Now),
-                new SqlParameter("@Score", score)
+            new SqlParameter("@UserId", currentUserId),
+            new SqlParameter("@TopicId", topicId),
+            new SqlParameter("@Score", score),
+            new SqlParameter("@DateTaken", DateTime.Now),  // Lưu thời điểm hoàn thành quiz
+            new SqlParameter("@DateDuring", totalTimeInSeconds)
             };
 
             using (var connection = new Connection())

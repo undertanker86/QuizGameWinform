@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Data;
 using System.Data.SqlClient;
+using System.Reflection.Metadata;
 using System.Security.Cryptography;
 using System.Text;
 using System.Windows.Forms;
 using QuizGame.Models.Connection;
+using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 
 namespace QuizGame.Views
 {
@@ -19,6 +21,7 @@ namespace QuizGame.Views
             LoadUsers();
             LoadGenderOptions();
             LoadRoleOptions();
+            txtPassword.PasswordChar = '*';
         }
 
         private void LoadGenderOptions()
@@ -34,7 +37,18 @@ namespace QuizGame.Views
             comboBoxRole.Items.Add("user");
             comboBoxRole.SelectedIndex = 1;
         }
-
+        private bool IsValidEmail(string email)
+        {
+            try
+            {
+                var addr = new System.Net.Mail.MailAddress(email);
+                return addr.Address == email;
+            }
+            catch
+            {
+                return false;
+            }
+        }
         private void LoadUsers()
         {
             string query = "SELECT [UserId], [FullName], [DateOfBirth], [Gender], [Email], [Password], [Role] FROM [QuizGame].[dbo].[Users]";
@@ -53,29 +67,64 @@ namespace QuizGame.Views
 
         private void btnAdd_Click(object sender, EventArgs e)
         {
-            string hashedPassword = ComputeSha256Hash(txtPassword.Text);
+            string email = txtEmail.Text.Trim();
 
-            string query = "INSERT INTO Users (FullName, DateOfBirth, Gender, Email, Password, Role) VALUES (@FullName, @DateOfBirth, @Gender, @Email, @Password, @Role)";
-
-            SqlParameter[] parameters = new SqlParameter[]
+           
+            if (string.IsNullOrEmpty(email) || !IsValidEmail(email))
             {
-                new SqlParameter("@FullName", txtFullName.Text),
-                new SqlParameter("@DateOfBirth", dtpDateOfBirth.Value),
-                new SqlParameter("@Gender", cbxGender.SelectedItem.ToString()),
-                new SqlParameter("@Email", txtEmail.Text),
-                new SqlParameter("@Password", hashedPassword),
-                new SqlParameter("@Role", comboBoxRole.SelectedItem.ToString())
-            };
-
-            try
-            {
-                connection.ExecuteNonQueryWithParams(query, parameters);
-                LoadUsers();
-                btnRefresh_Click(sender, e);
+                MessageBox.Show("Please enter a valid email address.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
             }
-            catch (Exception ex)
+
+
+            using (Connection connection = new Connection())
             {
-                MessageBox.Show("Error adding user: " + ex.Message);
+                string query = "SELECT COUNT(*) FROM Users WHERE Email = @Email";
+                SqlParameter[] parameters = new SqlParameter[] { new SqlParameter("@Email", email) };
+
+                connection.OpenConnection();
+                var result = connection.ExecuteScalar(query, parameters);
+                connection.CloseConnection();
+
+             
+                if ((int)result > 0)
+                {
+                    MessageBox.Show("Email existed", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+
+                // Nếu email chưa tồn tại, tiếp tục thêm tài khoản mới
+                string hashedPassword = ComputeSha256Hash(txtPassword.Text);
+
+                string insertQuery = "INSERT INTO Users (FullName, DateOfBirth, Gender, Email, Password, Role) VALUES (@FullName, @DateOfBirth, @Gender, @Email, @Password, @Role)";
+                SqlParameter[] insertParameters = new SqlParameter[]
+                {
+            new SqlParameter("@FullName", txtFullName.Text),
+            new SqlParameter("@DateOfBirth", dtpDateOfBirth.Value),
+            new SqlParameter("@Gender", cbxGender.SelectedItem.ToString()),
+            new SqlParameter("@Email", email),
+            new SqlParameter("@Password", hashedPassword),
+            new SqlParameter("@Role", comboBoxRole.SelectedItem.ToString())
+                };
+
+                try
+                {
+                  
+                    connection.OpenConnection();
+                    connection.ExecuteNonQueryWithParams(insertQuery, insertParameters);
+                    connection.CloseConnection();
+
+            
+                    LoadUsers();
+                    btnRefresh_Click(sender, e);
+
+                
+                    MessageBox.Show("Add Account Success !", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("Error adding user: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
             }
         }
 
@@ -117,29 +166,69 @@ namespace QuizGame.Views
 
         private void btnDelete_Click(object sender, EventArgs e)
         {
+            // Kiểm tra xem có dòng nào được chọn không
             if (dgvUsers.CurrentRow != null)
             {
+                // Lấy UserId từ dòng hiện tại
                 int userId = (int)dgvUsers.CurrentRow.Cells[0].Value;
-                string query = "DELETE FROM Users WHERE UserId = @UserId";
 
-                SqlParameter[] parameters = new SqlParameter[]
+                // Kiểm tra nếu người dùng có kết quả quiz
+                string checkQuery = "SELECT COUNT(*) FROM QuizResults WHERE UserId = @UserId";
+                SqlParameter[] checkParameters = new SqlParameter[]
                 {
-                    new SqlParameter("@UserId", userId)
+            new SqlParameter("@UserId", userId)
                 };
 
                 try
                 {
-                    connection.ExecuteNonQueryWithParams(query, parameters);
-                    LoadUsers();
+                    connection.OpenConnection();
+                    int quizResultCount = (int)connection.ExecuteScalar(checkQuery, checkParameters);
+                    connection.CloseConnection();
+
+                    if (quizResultCount > 0)
+                    {
+                        // Nếu người dùng đã có kết quả quiz, không cho phép xóa
+                        MessageBox.Show("Cannot Delete User. User has quiz results.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                    else
+                    {
+                        // Hiển thị hộp thoại xác nhận xóa
+                        DialogResult result = MessageBox.Show(
+                            "Are you sure you want to delete this user?",
+                            "Confirm Deletion",
+                            MessageBoxButtons.YesNo,
+                            MessageBoxIcon.Warning
+                        );
+
+                        if (result == DialogResult.Yes)
+                        {
+                            // Chuẩn bị câu lệnh xóa
+                            string query = "DELETE FROM Users WHERE UserId = @UserId";
+
+                            SqlParameter[] parameters = new SqlParameter[]
+                            {
+                        new SqlParameter("@UserId", userId)
+                            };
+
+                            // Thực thi câu lệnh xóa
+                            connection.OpenConnection();
+                            connection.ExecuteNonQueryWithParams(query, parameters);
+                            connection.CloseConnection();
+
+                            // Tải lại danh sách người dùng sau khi xóa
+                            LoadUsers();
+                            MessageBox.Show("User deleted successfully.", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        }
+                    }
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show("Error deleting user: " + ex.Message);
+                    MessageBox.Show("Error checking quiz results or deleting user: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
             else
             {
-                MessageBox.Show("Please select a user to delete.");
+                MessageBox.Show("Please select a user to delete.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 

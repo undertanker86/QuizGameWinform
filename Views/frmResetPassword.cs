@@ -92,8 +92,10 @@ namespace QuizGame.Views
                     if (rowsAffected > 0)
                     {
                         MessageBox.Show("Password has been successfully reset.", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                        // Mở lại form login hoặc thực hiện hành động khác
+                        frmLogin loginForm = new frmLogin();
+                        loginForm.Show();
                         this.Close();
+                       
                     }
                     else
                     {

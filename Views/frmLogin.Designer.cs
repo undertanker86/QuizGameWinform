@@ -30,6 +30,7 @@
         {
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(frmLogin));
             panel1 = new Panel();
+            button1 = new Button();
             label3 = new Label();
             label2 = new Label();
             pictureBox1 = new PictureBox();
@@ -38,7 +39,6 @@
             btnLogin = new Button();
             txtPassword = new TextBox();
             txtEmail = new TextBox();
-            button1 = new Button();
             panel1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)pictureBox1).BeginInit();
             SuspendLayout();
@@ -61,6 +61,17 @@
             panel1.Size = new Size(1179, 772);
             panel1.TabIndex = 0;
             // 
+            // button1
+            // 
+            button1.ForeColor = SystemColors.ActiveCaptionText;
+            button1.Location = new Point(645, 669);
+            button1.Name = "button1";
+            button1.Size = new Size(214, 34);
+            button1.TabIndex = 13;
+            button1.Text = "Forgot password?";
+            button1.UseVisualStyleBackColor = true;
+            button1.Click += button1_Click;
+            // 
             // label3
             // 
             label3.AutoSize = true;
@@ -79,9 +90,9 @@
             label2.Location = new Point(587, 303);
             label2.Margin = new Padding(4, 0, 4, 0);
             label2.Name = "label2";
-            label2.Size = new Size(122, 43);
+            label2.Size = new Size(121, 43);
             label2.TabIndex = 11;
-            label2.Text = "Gmail:";
+            label2.Text = "Email:";
             // 
             // pictureBox1
             // 
@@ -138,7 +149,6 @@
             txtPassword.Name = "txtPassword";
             txtPassword.Size = new Size(343, 43);
             txtPassword.TabIndex = 6;
-            txtPassword.Text = "123";
             // 
             // txtEmail
             // 
@@ -148,18 +158,6 @@
             txtEmail.Name = "txtEmail";
             txtEmail.Size = new Size(343, 43);
             txtEmail.TabIndex = 5;
-            txtEmail.Text = "admin@gmail.com";
-            // 
-            // button1
-            // 
-            button1.ForeColor = SystemColors.ActiveCaptionText;
-            button1.Location = new Point(645, 669);
-            button1.Name = "button1";
-            button1.Size = new Size(214, 34);
-            button1.TabIndex = 13;
-            button1.Text = "Forgot password?";
-            button1.UseVisualStyleBackColor = true;
-            button1.Click += button1_Click;
             // 
             // frmLogin
             // 

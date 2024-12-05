@@ -29,7 +29,7 @@ namespace QuizGame.Views
 
             using (Connection conn = new Connection())
             {
-                // Sửa query để kiểm tra trạng thái kích hoạt
+                
                 string query = "SELECT UserId, FullName, Role, IsActivated FROM Users WHERE Email = @Email AND Password = @Password";
 
                 SqlParameter[] parameters = new SqlParameter[] {
@@ -49,10 +49,10 @@ namespace QuizGame.Views
                         if (!isActivated)
                         {
                             MessageBox.Show("Your account is not activated. Please check your email for the activation link.", "Account Not Activated", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                            return; // Dừng lại nếu tài khoản chưa được kích hoạt
+                            return; 
                         }
 
-                        // Tiếp tục nếu tài khoản đã được kích hoạt
+                        //Continues if account actived
                         int userId = (int)reader["UserId"];
                         string role = reader["Role"].ToString();
                         string name = reader["FullName"].ToString();
@@ -105,10 +105,10 @@ namespace QuizGame.Views
 
         private void button1_Click(object sender, EventArgs e)
         {
-            // Mở form quên mật khẩu
+        
             frmForgotPassword forgotPasswordForm = new frmForgotPassword();
             forgotPasswordForm.Show();
-            this.Hide(); // Ẩn form đăng nhập khi chuyển qua form quên mật khẩu
+            this.Hide(); 
         }
     }
 }

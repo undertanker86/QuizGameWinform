@@ -17,6 +17,7 @@ namespace QuizGame.Views
             this.userId = userId;
             LoadGenderOptions();
             LoadUserInfo();
+            txtPassword.PasswordChar = '*';
         }
 
         private void LoadUserInfo()
@@ -36,7 +37,10 @@ namespace QuizGame.Views
                     txtFullName.Text = row["FullName"].ToString();
                     dtpDateOfBirth.Value = Convert.ToDateTime(row["DateOfBirth"]);
                     cmbGender.SelectedItem = row["Gender"].ToString();
-                    txtEmail.Text = row["Email"].ToString();
+                    txtEmail.Text = row["Email"].ToString(); // Hiển thị email nhưng không cho chỉnh sửa
+
+                    // Làm cho txtEmail không thể chỉnh sửa
+                    txtEmail.Enabled = false;
                 }
             }
         }
@@ -50,14 +54,22 @@ namespace QuizGame.Views
 
         private void btnSave_Click(object sender, EventArgs e)
         {
-            string query = "UPDATE Users SET FullName = @FullName, DateOfBirth = @DateOfBirth, Gender = @Gender, Email = @Email WHERE UserId = @UserId";
+            // Kiểm tra mật khẩu mới nếu có thay đổi
+            string passwordHash = null;
+            if (!string.IsNullOrEmpty(txtPassword.Text))
+            {
+                // Mã hóa mật khẩu mới nếu người dùng đã nhập mật khẩu mới
+                passwordHash = ComputeSha256Hash(txtPassword.Text);
+            }
+
+            string query = "UPDATE Users SET FullName = @FullName, DateOfBirth = @DateOfBirth, Gender = @Gender, Password = @Password WHERE UserId = @UserId";
             SqlParameter[] parameters = new SqlParameter[]
             {
                 new SqlParameter("@FullName", txtFullName.Text),
                 new SqlParameter("@DateOfBirth", dtpDateOfBirth.Value),
                 new SqlParameter("@Gender", cmbGender.SelectedItem.ToString()),
-                new SqlParameter("@Email", txtEmail.Text),
-                new SqlParameter("@UserId", userId)
+                new SqlParameter("@UserId", userId),
+                new SqlParameter("@Password", passwordHash ?? (object)DBNull.Value) // Cập nhật mật khẩu nếu có
             };
 
             using (var connection = new Connection())
@@ -74,6 +86,19 @@ namespace QuizGame.Views
             frmHome home = new frmHome();
             home.Show();
             this.Close();
+        }
+        private string ComputeSha256Hash(string rawData)
+        {
+            using (var sha256Hash = System.Security.Cryptography.SHA256.Create())
+            {
+                byte[] bytes = sha256Hash.ComputeHash(System.Text.Encoding.UTF8.GetBytes(rawData));
+                var builder = new System.Text.StringBuilder();
+                foreach (var byteData in bytes)
+                {
+                    builder.Append(byteData.ToString("x2"));
+                }
+                return builder.ToString();
+            }
         }
 
         private void label4_Click(object sender, EventArgs e)
